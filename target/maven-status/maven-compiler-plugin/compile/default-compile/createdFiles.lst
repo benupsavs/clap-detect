@@ -1,0 +1,9 @@
+bandautocut\clap\detect\ACDRClapDetect.class
+bandautocut\clap\detect\LowestJitter.class
+bandautocut\clap\detect\AudioResampler.class
+bandautocut\clap\detect\ClapDetectResult.class
+bandautocut\clap\detect\ClapDetectSimple.class
+bandautocut\clap\detect\RawMain.class
+bandautocut\clap\detect\ClapDetect.class
+bandautocut\clap\detect\ConvertMain.class
+bandautocut\clap\detect\LowestJitterResult.class
