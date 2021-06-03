@@ -26,7 +26,7 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
     private final Dimension size = new Dimension(0, 80);
     private final List<Consumer<DragEvent>> dragListeners = new LinkedList<>();
 
-    private float zoomFactor = 1;
+    private float zoomFactor = 0.01f;
     
     private int dragStartX;
     private boolean dragging;
@@ -72,7 +72,7 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
             xPoints[sourceIdx][0] = bounds.x - 1;
             yPoints[sourceIdx][0] = y + previousDistance;
             for (int x = bounds.x; x < bounds.x + bounds.width; x++) {
-                short sample = source.sampleAt(x);
+                short sample = source.sampleAt((int) (x / zoomFactor));
                 int currentDistance = (int) (sample / (float) Short.MAX_VALUE * yh / 2);
                 xPoints[sourceIdx][x - bounds.x + 1] = x;
                 yPoints[sourceIdx][x - bounds.x + 1] = y + currentDistance;
@@ -100,7 +100,8 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
     public void addSampleSource(SampleSource source) {
         this.sources.add(source);
         size.height = Math.min(40, sources.size() * 20);
-        size.width = Math.max(size.width, source.size());
+        int newWidth = (int) (source.size() / zoomFactor);
+        size.width = Math.max(size.width, newWidth);
         revalidate();
     }
     
@@ -146,7 +147,7 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
 
     @Override
     public void mouseReleased(MouseEvent e) {
-        int distance = e.getX() - dragStartX;
+        int distance = (int) ((e.getX() - dragStartX) / zoomFactor);
         if (distance > 0) {
             fireDragEvent(distance, true);
         }
@@ -163,7 +164,7 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
 
     @Override
     public void mouseDragged(MouseEvent e) {
-        int distance = e.getX() - dragStartX;
+        int distance = (int) ((e.getX() - dragStartX) / zoomFactor);
         fireDragEvent(distance, false);
         dragging = true;
     }

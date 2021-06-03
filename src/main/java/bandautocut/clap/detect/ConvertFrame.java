@@ -669,8 +669,10 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
                     try (SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info)) {
                         line.open(audioFormat, 4096);
                         line.start();
-                        for (int i = Math.max(0, pos - 20000); i < pos; i += 2048) {
-                            line.write(subjectByteBuf.array(), i * 2, 4096);
+                        byte[] bytes = subjectByteBuf.array();
+                        int offset = subjectByteBuf.arrayOffset();
+                        for (int i = Math.max(0, pos - 20000); i < pos + 5; i += 2048) {
+                            line.write(bytes, offset + i * 2, 4096);
                         }
                         line.drain();
                         line.stop();
@@ -689,7 +691,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         scrollButton.addActionListener(e -> {
             try {
                 int position = Integer.parseInt(positionTextField.getText());
-                Rectangle rect = new Rectangle(position - sampleViewerPane.getWidth(), 0, sampleViewerPane.getWidth(), sampleViewerPane.getHeight());
+                Rectangle rect = new Rectangle(position, 0, 1, 1);
                 sampleViewer.scrollRectToVisible(rect);
             } catch (NumberFormatException ex) {}
         });
@@ -716,7 +718,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
             conversionProgressBar.setIndeterminate(true);
             
             File inputFile = new File(subjectFileField.getText());
-            File outputFile = new File(inputFile.getParentFile(), inputFile.getName().replaceAll("\\..$", "") + "_cut.mp4");
+            File outputFile = new File(inputFile.getParentFile(), inputFile.getName().replaceAll("\\..+$", "") + "_auto.mp4");
             
             int position = Integer.parseInt(positionTextField.getText());
             new Thread() {
@@ -868,9 +870,9 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     public void accept(SampleViewer.DragEvent e) {
         if (e.isDone()) {
             dragging = false;
-            positionTextField.setText(String.valueOf(offsetStart + e.getDistance()));
+            positionTextField.setText(String.valueOf(offsetStart - e.getDistance()));
         } else if (dragging) {
-            positionTextField.setText(String.valueOf(offsetStart + e.getDistance()));
+            positionTextField.setText(String.valueOf(offsetStart - e.getDistance()));
         } else {
             offsetStart = Integer.parseInt(positionTextField.getText());
             dragging = true;

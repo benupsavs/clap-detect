@@ -28,7 +28,7 @@ public class ShortBufferSampleSource implements SampleSource {
 
     @Override
     public short sampleAt(int position) {
-        int offsetPosition = position + offset;
+        int offsetPosition = position - offset;
 
         if (offsetPosition < 0 || offsetPosition > size) {
             return 0;

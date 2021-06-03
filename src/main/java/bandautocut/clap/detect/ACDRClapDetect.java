@@ -167,10 +167,12 @@ public class ACDRClapDetect implements ClapDetect {
         if (numberOfFoundClaps < numberOfClaps) {
             return result;
         }
-        
+
         LowestJitterResult jitterResult = new LowestJitter().findLowestJitter(clapPositions, numberOfFoundClaps, numberOfClaps);
         result.setAverageJitter(jitterResult.getAverageJitter());
         result.setBestPosition(jitterResult.getBestPosition());
+
+        result.setBestPosition(Math.max(result.getBestPosition() - 3, 0));
         
         return result;
     }
