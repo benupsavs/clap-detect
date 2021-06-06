@@ -172,7 +172,7 @@ public class ACDRClapDetect implements ClapDetect {
         result.setAverageJitter(jitterResult.getAverageJitter());
         result.setBestPosition(jitterResult.getBestPosition());
 
-        result.setBestPosition(Math.max(result.getBestPosition() - 3, 0));
+        result.setBestPosition(result.getBestPosition() + 5600);
         
         return result;
     }

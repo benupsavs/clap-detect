@@ -99,16 +99,18 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
     
     public void addSampleSource(SampleSource source) {
         this.sources.add(source);
-        size.height = Math.min(40, sources.size() * 20);
-        int newWidth = (int) (source.size() / zoomFactor);
+        size.height = Math.max(40, sources.size() * 20);
+        int newWidth = (int) (source.size() * zoomFactor);
         size.width = Math.max(size.width, newWidth);
         revalidate();
+        repaint();
     }
     
     public void removeAllSources() {
         this.sources.clear();
         size.width = 0;
         revalidate();
+        repaint();
     }
 
     @Override
@@ -142,15 +144,15 @@ public class SampleViewer extends JPanel implements Scrollable, MouseListener, M
 
     @Override
     public void mousePressed(MouseEvent e) {
-        dragStartX = e.getX();
+        if (!dragging) {
+            dragStartX = e.getX();
+        }
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
         int distance = (int) ((e.getX() - dragStartX) / zoomFactor);
-        if (distance > 0) {
-            fireDragEvent(distance, true);
-        }
+        fireDragEvent(distance, true);
         dragging = false;
     }
 

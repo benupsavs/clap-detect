@@ -4,9 +4,8 @@ import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
 import com.github.kokorin.jaffree.ffmpeg.NullOutput;
 import com.github.kokorin.jaffree.ffmpeg.UrlInput;
 import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Rectangle;
+
+import java.awt.*;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -34,6 +33,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
@@ -49,6 +49,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     private int offsetStart;
     
     private ShortBuffer referenceBuf;
+    private ByteBuffer referenceByteBuf;
     private ByteBuffer subjectByteBuf;
     private ShortBuffer subjectBuf;
     private ShortBufferSampleSource referenceSampleSource;
@@ -170,12 +171,13 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
                         ProgressMonitor progressMonitor = new ProgressMonitor(ConvertFrame.this, "Reading audio", "", 0, 2);
                         progressMonitor.setMillisToDecideToPopup(0);
                         progressMonitor.setMillisToPopup(1);
-                        referenceBuf = resampler.resampleAudio(referenceRecordingFileField.getText(), 1, 8000)
-                                .order(ByteOrder.LITTLE_ENDIAN)
+                        referenceByteBuf = resampler.resampleAudio(referenceRecordingFileField.getText(), 1, 8000)
+                                .order(ByteOrder.nativeOrder());
+                        referenceBuf = referenceByteBuf
                                 .asShortBuffer();
                         progressMonitor.setProgress(1);
                         subjectByteBuf = resampler.resampleAudio(subjectFileField.getText(), 1, 8000)
-                                .order(ByteOrder.LITTLE_ENDIAN);
+                                .order(ByteOrder.nativeOrder());
                         subjectBuf = subjectByteBuf
                                 .asShortBuffer();
                         progressMonitor.setProgress(2);
@@ -660,6 +662,8 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
                 position = Integer.parseInt(positionTextField.getText());
             } catch (NumberFormatException ex) {
             }
+            boolean referenceEnabled = referenceEnabledCheckBox.isSelected();
+            boolean subjectEnabled = subjectEnabledCheckBox.isSelected();
             int pos = position;
             new Thread() {
                 @Override
@@ -669,10 +673,37 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
                     try (SourceDataLine line = (SourceDataLine) AudioSystem.getLine(info)) {
                         line.open(audioFormat, 4096);
                         line.start();
-                        byte[] bytes = subjectByteBuf.array();
-                        int offset = subjectByteBuf.arrayOffset();
-                        for (int i = Math.max(0, pos - 20000); i < pos + 5; i += 2048) {
-                            line.write(bytes, offset + i * 2, 4096);
+                        byte[] referenceBytes = referenceByteBuf.array();
+                        int referenceOffset = referenceByteBuf.arrayOffset();
+                        byte[] subjectBytes = subjectByteBuf.array();
+                        int subjectOffset = subjectByteBuf.arrayOffset();
+                        byte[] tempBytes = null;
+                        ByteBuffer tempByteBuf = null;
+                        ShortBuffer tempBuf = null;
+                        int refStart = referenceRecordingStartSample();
+                        for (int i = Math.max(0, pos - 20000); i < pos + 1000; i += 2048) {
+                            if (referenceEnabled && !subjectEnabled) {
+                                line.write(referenceBytes, referenceOffset + (i - pos + refStart) * 2, 4096);
+                            } else if (subjectEnabled && !referenceEnabled) {
+                                line.write(subjectBytes, subjectOffset + i * 2, 4096);
+                            } else if (subjectEnabled && referenceEnabled) {
+                                // Both enabled; mix the two audio sources together
+                                if (tempBytes == null) {
+                                    tempBytes = new byte[4096];
+                                    tempByteBuf = ByteBuffer.wrap(tempBytes).order(subjectByteBuf.order());
+                                    tempBuf = tempByteBuf.asShortBuffer();
+                                }
+                                assert tempBuf != null;
+                                tempBuf.clear();
+                                for (int j = 0; j < 2048; j++) {
+                                    short referenceSample = referenceBuf.get(i - pos + refStart + j);
+                                    short subjectSample = subjectBuf.get(i + j);
+                                    short sample = (short) (((int) referenceSample + subjectSample) / 2);
+                                    tempBuf.put(sample);
+                                }
+                                tempBuf.flip();
+                                line.write(tempBytes, 0, 4096);
+                            }
                         }
                         line.drain();
                         line.stop();
@@ -721,47 +752,60 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
             File outputFile = new File(inputFile.getParentFile(), inputFile.getName().replaceAll("\\..+$", "") + "_auto.mp4");
             
             int position = Integer.parseInt(positionTextField.getText());
-            new Thread() {
-                @Override
-                public void run() {
-                    final AtomicLong atomicDuration = new AtomicLong();
-                    FFmpeg.atPath()
-                            .addInput(UrlInput.fromPath(Path.of(inputFile.getAbsolutePath())))
-                            .setOverwriteOutput(true)
-                            .addOutput(new NullOutput())
-                            .setProgressListener(progress -> {
-                                atomicDuration.set(progress.getTimeMillis());
-                            })
-                            .execute();
-                    
-                    int duration = atomicDuration.intValue();
+            new Thread(() -> {
+                final AtomicLong atomicDuration = new AtomicLong();
+                FFmpeg.atPath()
+                        .addInput(UrlInput.fromPath(Path.of(inputFile.getAbsolutePath())))
+                        .setOverwriteOutput(true)
+                        .addOutput(new NullOutput())
+                        .setProgressListener(progress -> {
+                            atomicDuration.set(progress.getTimeMillis());
+                        })
+                        .execute();
 
-                    SwingUtilities.invokeLater(() -> {
-                        conversionProgressBar.setIndeterminate(false);
-                        conversionProgressBar.setMinimum(position / 8);
-                        conversionProgressBar.setMaximum(duration);
-                    });
-                    FFmpeg.atPath()
-                            .addInput(
-                                    UrlInput.fromPath(Path.of(inputFile.getAbsolutePath()))
-                                            .setPosition(position / 8)
-                            )
-                            .setOverwriteOutput(true)
-                            .addArguments("-movflags", "faststart")
-                            .setFilter("v", "scale='min(1920,iw)':min'(1080,ih)':force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2")
-                            .addOutput(UrlOutput.toUrl(outputFile.getAbsolutePath()))
-                            .setProgressListener(progress -> {
-                                SwingUtilities.invokeLater(() -> {
-                                    conversionProgressBar.setValue(progress.getTimeMillis().intValue());
-                                });
-                            })
-                            .execute();
-                    SwingUtilities.invokeLater(() -> {
-                        convertButton.setText("Convert");
-                        conversionProgressBar.setValue(0);
-                    });
+                int duration = atomicDuration.intValue();
+
+                Taskbar taskbar;
+                if (Taskbar.isTaskbarSupported()) {
+                    taskbar = Taskbar.getTaskbar();
+                    taskbar.setWindowProgressState(ConvertFrame.this, Taskbar.State.NORMAL);
+                } else {
+                    taskbar = null;
                 }
-            }.start();
+
+                SwingUtilities.invokeLater(() -> {
+                    conversionProgressBar.setIndeterminate(false);
+                    conversionProgressBar.setMinimum(position / 8);
+                    conversionProgressBar.setMaximum(duration);
+                });
+                FFmpeg.atPath()
+                        .addInput(
+                                UrlInput.fromPath(Path.of(inputFile.getAbsolutePath()))
+                                        .setPosition(position / 8)
+                        )
+                        .setOverwriteOutput(true)
+                        .addArguments("-movflags", "faststart")
+                        .setFilter("v", "scale='min(1920,iw)':min'(1080,ih)':force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2")
+                        .addOutput(UrlOutput.toUrl(outputFile.getAbsolutePath()))
+                        .setProgressListener(progress -> {
+                            SwingUtilities.invokeLater(() -> {
+                                int timeValue = progress.getTimeMillis().intValue();
+                                conversionProgressBar.setValue(timeValue);
+                                if (taskbar != null) {
+                                    int percentage = (100 * (timeValue - (position / 8))) / (duration - (position / 8));
+                                    taskbar.setWindowProgressValue(ConvertFrame.this, percentage);
+                                }
+                            });
+                        })
+                        .execute();
+                SwingUtilities.invokeLater(() -> {
+                    convertButton.setText("Convert");
+                    conversionProgressBar.setValue(0);
+                    if (taskbar != null) {
+                        taskbar.setWindowProgressState(ConvertFrame.this, Taskbar.State.OFF);
+                    }
+                });
+            }).start();
         });
 
         gbc.gridx++;
@@ -798,7 +842,9 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     
     private void selectMediaFile(JTextField textField, String currentDirectoryPath) {
         JFileChooser fileChooser = new JFileChooser(currentDirectoryPath);
-        fileChooser.addChoosableFileFilter(new FileNameExtensionFilter("Media Files", "mov", "mp4", "mpg", "avi", "qt", "mpeg"));
+        FileFilter fileFilter = new FileNameExtensionFilter("Media Files", "mov", "mp4", "mpg", "avi", "qt", "mpeg");
+        fileChooser.addChoosableFileFilter(fileFilter);
+        fileChooser.setFileFilter(fileFilter);
         if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
             textField.setText(selectedFile.getAbsolutePath());
@@ -842,6 +888,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         subjectSampleSource.setOffset(referenceRecordingStartSample() - position);
         sampleViewer.revalidate();
         sampleViewer.repaint();
+        clapPositionLabel.setText(String.format("Position set to %.2fs", position / 8000f));
 //        Rectangle rect = new Rectangle(position - sampleViewerPane.getWidth(), 0, sampleViewerPane.getWidth(), sampleViewerPane.getHeight());
 //        sampleViewer.scrollRectToVisible(rect);
     }
@@ -870,12 +917,16 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     public void accept(SampleViewer.DragEvent e) {
         if (e.isDone()) {
             dragging = false;
-            positionTextField.setText(String.valueOf(offsetStart - e.getDistance()));
         } else if (dragging) {
-            positionTextField.setText(String.valueOf(offsetStart - e.getDistance()));
         } else {
-            offsetStart = Integer.parseInt(positionTextField.getText());
+            try {
+                offsetStart = Integer.parseInt(positionTextField.getText());
+            } catch (NumberFormatException ex) {
+                offsetStart = 0;
+            }
             dragging = true;
         }
+        String newValue = String.valueOf(offsetStart - e.getDistance());
+        positionTextField.setText(newValue);
     }
 }
