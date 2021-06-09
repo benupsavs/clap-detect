@@ -6,12 +6,12 @@ import java.nio.ShortBuffer;
  *
  */
 public class ShortBufferSampleSource implements SampleSource {
-    
+
     private final String name;
     private final ShortBuffer buf;
     private final int size;
     private final float volumeMultiplier;
-    
+
     private int offset;
 
     public ShortBufferSampleSource(String name, ShortBuffer buf, float volumeMultiplier) {
@@ -30,7 +30,7 @@ public class ShortBufferSampleSource implements SampleSource {
     public short sampleAt(int position) {
         int offsetPosition = position - offset;
 
-        if (offsetPosition < 0 || offsetPosition > size) {
+        if (offsetPosition < 0 || offsetPosition >= size) {
             return 0;
         }
 

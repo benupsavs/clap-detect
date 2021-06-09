@@ -40,21 +40,21 @@ import javax.swing.filechooser.FileNameExtensionFilter;
  *
  */
 public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.DragEvent> {
-    
+
     private final Preferences prefs;
     private final AudioResampler resampler;
     private final LoudnessDetection loudnessDetection;
-    
+
     private boolean dragging = false;
     private int offsetStart;
-    
+
     private ShortBuffer referenceBuf;
     private ByteBuffer referenceByteBuf;
     private ByteBuffer subjectByteBuf;
     private ShortBuffer subjectBuf;
     private ShortBufferSampleSource referenceSampleSource;
     private ShortBufferSampleSource subjectSampleSource;
-    
+
     private JTextField referenceRecordingFileField;
     private JTextField subjectFileField;
     private JTextField referenceRecordingOffsetSecondsField;
@@ -67,7 +67,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     private JButton loadButton;
     private SampleViewer sampleViewer;
     private JScrollPane sampleViewerPane;
-    
+
     private JPanel clapDetectionPanel;
     private JTextField thresholdConstantField;
     private JTextField decisionThresholdField;
@@ -80,16 +80,18 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     private JCheckBox subjectEnabledCheckBox;
     private JButton playButton;
     private JButton scrollButton;
-    
+
     private JTextField positionTextField;
 
 
-    
+
     public static void main(String[] args) throws Exception {
-        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        System.setProperty("swing.boldMetal", "false");
+        System.setProperty("swing.metalTheme", "steel");
+        UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         new ConvertFrame(new AudioResampler(), new LoudnessDetection()).setVisible(true);
     }
-    
+
     public ConvertFrame(AudioResampler resampler, LoudnessDetection loudnessDetection) {
         super("Cut and Convert");
         this.resampler = resampler;
@@ -101,22 +103,22 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         pack();
         loadComponentValues();
     }
-    
+
     private void initComponents() {
         GridBagConstraints gbc = new GridBagConstraints();
         GridBagLayout gbl = new GridBagLayout();
-        
+
         JPanel recordingsPanel = new JPanel();
         GridBagLayout gblp = new GridBagLayout();
         GridBagConstraints gbcp = new GridBagConstraints();
         recordingsPanel.setLayout(gblp);
-        
+
         JLabel referenceRecordingLabel = new JLabel("Reference recording");
         gbcp.gridx = gbcp.gridy = 0;
         gbcp.anchor = GridBagConstraints.WEST;
         gblp.setConstraints(referenceRecordingLabel, gbcp);
         recordingsPanel.add(referenceRecordingLabel);
-        
+
         referenceRecordingFileField = new JTextField(20);
         referenceRecordingFileField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -181,9 +183,9 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
                         subjectBuf = subjectByteBuf
                                 .asShortBuffer();
                         progressMonitor.setProgress(2);
-                        
+
                         float subjectLoudnessMultiplier = loudnessDetection.suggestMultiplier(subjectBuf);
-                        
+
                         SwingUtilities.invokeLater(() -> {
                             sampleViewer.removeAllSources();
                             referenceSampleSource = new ShortBufferSampleSource("Reference", referenceBuf, 1);
@@ -219,7 +221,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbcp.weighty = 0;
         gblp.setConstraints(subjectRecordingLabel, gbcp);
         recordingsPanel.add(subjectRecordingLabel);
-        
+
         subjectFileField = new JTextField(20);
         subjectFileField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -243,7 +245,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbcp.weightx = 1;
         gblp.setConstraints(subjectFileField, gbcp);
         recordingsPanel.add(subjectFileField);
-        
+
         selectSubjectRecordingButton = new JButton("...");
         selectSubjectRecordingButton.addActionListener(e -> {
             String path;
@@ -272,7 +274,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbc.gridwidth = 2;
         gbl.setConstraints(recordingsPanel, gbc);
         getContentPane().add(recordingsPanel);
-        
+
         sampleViewer = new SampleViewer();
         sampleViewer.addDragListener(this);
         sampleViewerPane = new JScrollPane(sampleViewer);
@@ -284,7 +286,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbc.anchor = GridBagConstraints.CENTER;
         gbl.setConstraints(sampleViewerPane, gbc);
         getContentPane().add(sampleViewerPane);
-        
+
         clapDetectionPanel = new JPanel();
         clapDetectionPanel.setBorder(BorderFactory.createTitledBorder("Clap Detection"));
         gblp = new GridBagLayout();
@@ -296,27 +298,27 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         JLabel thresholdConstantLabel = new JLabel("Threshold constant");
         gblp.setConstraints(thresholdConstantLabel, gbcp);
         clapDetectionPanel.add(thresholdConstantLabel);
-        
+
         gbcp.gridy++;
         JLabel decisionThresholdLabel = new JLabel("Decision threshold");
         gblp.setConstraints(decisionThresholdLabel, gbcp);
         clapDetectionPanel.add(decisionThresholdLabel);
-        
+
         gbcp.gridy++;
         JLabel shortTermDurationLabel = new JLabel("Short term duration");
         gblp.setConstraints(shortTermDurationLabel, gbcp);
         clapDetectionPanel.add(shortTermDurationLabel);
-        
+
         gbcp.gridy++;
         JLabel longTermDurationLabel = new JLabel("Long term duration");
         gblp.setConstraints(longTermDurationLabel, gbcp);
         clapDetectionPanel.add(longTermDurationLabel);
-        
+
         gbcp.gridy++;
         JLabel maxAllowedClapDurationLabel = new JLabel("Max allowed clap duration");
         gblp.setConstraints(maxAllowedClapDurationLabel, gbcp);
         clapDetectionPanel.add(maxAllowedClapDurationLabel);
-        
+
         thresholdConstantField = new JTextField(20);
         thresholdConstantField.getDocument().addDocumentListener(new DocumentListener() {
 
@@ -348,7 +350,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbcp.anchor = GridBagConstraints.BASELINE;
         gblp.setConstraints(thresholdConstantField, gbcp);
         clapDetectionPanel.add(thresholdConstantField);
-        
+
         gbcp.gridy++;
         decisionThresholdField = new JTextField(20);
         decisionThresholdField.getDocument().addDocumentListener(new DocumentListener() {
@@ -376,7 +378,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(decisionThresholdField, gbcp);
         clapDetectionPanel.add(decisionThresholdField);
-        
+
         gbcp.gridy++;
         shortTermDurationField = new JTextField(20);
         shortTermDurationField.getDocument().addDocumentListener(new DocumentListener() {
@@ -403,7 +405,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(shortTermDurationField, gbcp);
         clapDetectionPanel.add(shortTermDurationField);
-        
+
         gbcp.gridy++;
         longTermDurationField = new JTextField(20);
         longTermDurationField.getDocument().addDocumentListener(new DocumentListener() {
@@ -430,7 +432,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(longTermDurationField, gbcp);
         clapDetectionPanel.add(longTermDurationField);
-        
+
         gbcp.gridy++;
         maxAllowedClapDurationField = new JTextField(20);
         maxAllowedClapDurationField.getDocument().addDocumentListener(new DocumentListener() {
@@ -458,7 +460,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(maxAllowedClapDurationField, gbcp);
         clapDetectionPanel.add(maxAllowedClapDurationField);
-        
+
         detectClapsButton = new JButton("Detect claps");
         detectClapsButton.addActionListener(e -> {
             if (subjectBuf == null) {
@@ -497,7 +499,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbcp.anchor = GridBagConstraints.BASELINE;
         gblp.setConstraints(detectClapsButton, gbcp);
         clapDetectionPanel.add(detectClapsButton);
-        
+
         clapPositionLabel = new JLabel("");
         gbcp.gridx++;
         gbcp.anchor = GridBagConstraints.BASELINE_LEADING;
@@ -511,21 +513,21 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbc.gridheight = 2;
         gbl.setConstraints(clapDetectionPanel, gbc);
         getContentPane().add(clapDetectionPanel);
-        
+
         JPanel positionPanel = new JPanel();
         positionPanel.setBorder(BorderFactory.createTitledBorder("Position"));
-        
+
         gblp = new GridBagLayout();
         gbcp = new GridBagConstraints();
         gbcp.gridx = 0;
         gbcp.gridy = 0;
         positionPanel.setLayout(gblp);
-        
+
         JLabel referenceRecordingOffsetLabel = new JLabel("Ref. Offset");
         gbcp.anchor = GridBagConstraints.BASELINE_LEADING;
         gblp.setConstraints(referenceRecordingOffsetLabel, gbcp);
         positionPanel.add(referenceRecordingOffsetLabel);
-        
+
         gbcp.gridx++;
         gbcp.fill = GridBagConstraints.HORIZONTAL;
         referenceRecordingOffsetSecondsField = new JTextField(3);
@@ -554,7 +556,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(referenceRecordingOffsetSecondsField, gbcp);
         positionPanel.add(referenceRecordingOffsetSecondsField);
-        
+
         gbcp.gridx++;
         gbcp.anchor = GridBagConstraints.BASELINE;
         referenceRecordingOffsetFramesField = new JTextField(3);
@@ -583,7 +585,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(referenceRecordingOffsetFramesField, gbcp);
         positionPanel.add(referenceRecordingOffsetFramesField);
-        
+
         JLabel positionLabel = new JLabel("Cut frame");
         gbcp.anchor = GridBagConstraints.BASELINE_LEADING;
         gbcp.gridx = 0;
@@ -591,7 +593,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbcp.gridwidth = 1;
         gblp.setConstraints(positionLabel, gbcp);
         positionPanel.add(positionLabel);
-        
+
         positionTextField = new JTextField(10);
         positionTextField.getDocument().addDocumentListener(new DocumentListener() {
 
@@ -623,32 +625,32 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbcp.anchor = GridBagConstraints.BASELINE;
         gblp.setConstraints(positionTextField, gbcp);
         positionPanel.add(positionTextField);
-        
-        
+
+
         gbc.gridx++;
         gbc.weightx = 0;
         gbc.gridheight = 1;
         gbl.setConstraints(positionPanel, gbc);
         getContentPane().add(positionPanel);
-        
+
         JPanel previewPanel = new JPanel();
         previewPanel.setBorder(BorderFactory.createTitledBorder("Preview"));
-        
+
         gblp = new GridBagLayout();
         gbcp = new GridBagConstraints();
         gbcp.gridx = 0;
         gbcp.gridy = 0;
         previewPanel.setLayout(gblp);
-        
+
         referenceEnabledCheckBox = new JCheckBox("Reference", false);
         gblp.setConstraints(referenceEnabledCheckBox, gbcp);
         previewPanel.add(referenceEnabledCheckBox);
-        
+
         subjectEnabledCheckBox = new JCheckBox("Subject", true);
         gbcp.gridy++;
         gblp.setConstraints(subjectEnabledCheckBox, gbcp);
         previewPanel.add(subjectEnabledCheckBox);
-        
+
         gbcp.gridx++;
         gbcp.gridy = 0;
         playButton = new JButton("Play");
@@ -716,7 +718,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(playButton, gbcp);
         previewPanel.add(playButton);
-        
+
         gbcp.gridy++;
         scrollButton = new JButton("Scroll");
         scrollButton.addActionListener(e -> {
@@ -728,7 +730,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         });
         gblp.setConstraints(scrollButton, gbcp);
         previewPanel.add(scrollButton);
-        
+
         gbc.gridy++;
         gbc.weightx = 0;
         gbc.fill = GridBagConstraints.BOTH;
@@ -742,15 +744,15 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbl.setConstraints(conversionProgressBar, gbc);
         getContentPane().add(conversionProgressBar);
-        
+
         convertButton = new JButton("Convert");
         convertButton.addActionListener(e -> {
             convertButton.setText("Stop");
             conversionProgressBar.setIndeterminate(true);
-            
+
             File inputFile = new File(subjectFileField.getText());
             File outputFile = new File(inputFile.getParentFile(), inputFile.getName().replaceAll("\\..+$", "") + "_auto.mp4");
-            
+
             int position = Integer.parseInt(positionTextField.getText());
             new Thread(() -> {
                 final AtomicLong atomicDuration = new AtomicLong();
@@ -815,11 +817,11 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         gbc.weighty = 0;
         gbc.fill = GridBagConstraints.NONE;
         gbl.setConstraints(convertButton, gbc);
-        
+
         getContentPane().setLayout(gbl);
         getContentPane().add(convertButton);
     }
-    
+
     private void loadComponentValues() {
         referenceRecordingFileField.setText(prefs.get("reference.recording.path", ""));
         subjectFileField.setText(prefs.get("subject.recording.path", ""));
@@ -831,15 +833,15 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
         longTermDurationField.setText(prefs.get("clapdetect.longterm.duration", ""));
         maxAllowedClapDurationField.setText(prefs.get("clapdetect.clap.maxlength", ""));
     }
-    
+
     private void referenceRecordingUpdated(String value) {
         prefs.put("reference.recording.path", value);
     }
-    
+
     private void subjectRecordingUpdated(String value) {
         prefs.put("subject.recording.path", value);
     }
-    
+
     private void selectMediaFile(JTextField textField, String currentDirectoryPath) {
         JFileChooser fileChooser = new JFileChooser(currentDirectoryPath);
         FileFilter fileFilter = new FileNameExtensionFilter("Media Files", "mov", "mp4", "mpg", "avi", "qt", "mpeg");
@@ -850,7 +852,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
             textField.setText(selectedFile.getAbsolutePath());
         }
     }
-    
+
     int referenceRecordingStartSample() {
         int startSeconds = 0;
         int startFrames = 0;
@@ -865,11 +867,11 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
     private void referenceStartSecondsUpdated(int seconds) {
         prefs.put("reference.recording.start.seconds", String.valueOf(seconds));
     }
-    
+
     private void referenceStartFramesUpdated(int frames) {
         prefs.put("reference.recording.start.frames", String.valueOf(frames));
     }
-    
+
     void setCutPosition(int frame) {
         Runnable r = () -> {
             String text = String.valueOf(frame);
@@ -883,7 +885,7 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
             SwingUtilities.invokeLater(r);
         }
     }
-    
+
     private void positionFieldChanged(int position) {
         subjectSampleSource.setOffset(referenceRecordingStartSample() - position);
         sampleViewer.revalidate();
@@ -892,23 +894,23 @@ public final class ConvertFrame extends JFrame implements Consumer<SampleViewer.
 //        Rectangle rect = new Rectangle(position - sampleViewerPane.getWidth(), 0, sampleViewerPane.getWidth(), sampleViewerPane.getHeight());
 //        sampleViewer.scrollRectToVisible(rect);
     }
-    
+
     private void thresholdConstantChanged(int thresholdConstant) {
         prefs.put("clapdetect.threshold.constant", String.valueOf(thresholdConstant));
     }
-    
+
     private void decisionThresholdChanged(int decisionThreshold) {
         prefs.put("clapdetect.decision.threshold", String.valueOf(decisionThreshold));
     }
-    
+
     private void shortTermDurationChanged(int shortTermDuraton) {
         prefs.put("clapdetect.shortterm.duration", String.valueOf(shortTermDuraton));
     }
-    
+
     private void longTermDurationChanged(int longTermDuration) {
         prefs.put("clapdetect.longterm.duration", String.valueOf(longTermDuration));
     }
-    
+
     private void maxAllowedClapLengthChanged(int maxAllowedClapLength) {
         prefs.put("clapdetect.clap.maxlength", String.valueOf(maxAllowedClapLength));
     }
