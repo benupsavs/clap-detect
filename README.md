@@ -4,6 +4,10 @@ A Java desktop application that integrates with ffmpeg in order to detect 4 clap
 
 This is useful for coordinating musical performances for compositing movies into a single production.
 
+# Requirements
+- Java 17 or later
+- ffmpeg
+
 ## Usage
 
 - Launch the Java app. Install Maven and run `mvn package exec:java`
