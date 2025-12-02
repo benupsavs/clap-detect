@@ -6,7 +6,7 @@ This is useful for coordinating musical performances for compositing movies into
 
 ## Usage
 
-- Launch the Java app.
+- Launch the Java app. Install Maven and run `mvn package exec:java`
 - Load the source movie
 - Load the target movie
 - Detect the clap position automatically
